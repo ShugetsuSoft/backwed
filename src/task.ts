@@ -1,13 +1,9 @@
 import { runRankTask } from "./tasks/rank";
 import { syncronizeIllusts, syncronizeUsers } from "./tasks/sync";
 import { connectMeliSearch, connectMongo } from "./utils/connect";
-import { Config } from "./models/config";
+import { readConfig } from "./models/config";
 import { loadFilter } from "./utils/filter";
-
-const readConfig = async (path: string): Promise<Config> => {
-  const file = Bun.file(path);
-  return await file.json();
-};
+import { initSearch } from "./models/search";
 
 const args = process.argv.slice(2);
 const flags: Record<string, string | boolean> = {};
@@ -30,8 +26,12 @@ if (flags["help"]) {
 }
 (async () => {
   await readConfig("config.json");
+  await new Promise((resolve) => {
+    setTimeout(resolve, 1000)
+  })
   await connectMongo();
   await connectMeliSearch();
+  await initSearch();
   await loadFilter();
   if (flags["rank"]) {
     await runRankTask();
@@ -44,4 +44,5 @@ if (flags["help"]) {
       await syncronizeIllusts();
     }
   }
+  process.exit(0);
 })();

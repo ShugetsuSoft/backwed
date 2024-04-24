@@ -38,7 +38,7 @@ export const initSearch = async () => {
         apiKey: config.openai.key,
         model: "text-embedding-3-small",
         documentTemplate:
-          "An illustration about {{doc.originalTags||join:', '}}",
+          "An illustration about {{doc.originalTags}}",
         dimensions: 1536,
       },
     },

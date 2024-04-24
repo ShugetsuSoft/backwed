@@ -34,6 +34,10 @@ import PromisePool from "../utils/pool";
 import { connections } from "../utils/connect";
 import { filter } from "../utils/filter";
 
+const workingTasks = {
+  userIllusts: new Set<number>(),
+}
+
 const pageValidator = validator("query", (value, c) => {
   const page = value["page"];
   if (!page || typeof page !== "string") {
@@ -119,8 +123,12 @@ app.get("/illustrator/:id/illusts", pageValidator, async (c) => {
     (user.illusts_update_time?.getTime() ?? 0) + 172800000 <
     new Date().getTime()
   ) {
+    if (workingTasks.userIllusts.has(id)) {
+      return c.json(error(Errors.TryInFewMinutes));
+    }
     const fetchedUserIllusts = await fetchUserIllusts(id);
     const fetchedUserIllustsRes = fromPixivUserIllusts(fetchedUserIllusts);
+    workingTasks.userIllusts.add(id);
     await new PromisePool(
       CONCURRENCY,
       fetchedUserIllustsRes.map((illust_id) => async () => {
@@ -135,6 +143,7 @@ app.get("/illustrator/:id/illusts", pageValidator, async (c) => {
         }
       })
     ).run();
+    workingTasks.userIllusts.delete(id);
     user.illusts_update_time = new Date();
     await user.save();
   }
@@ -272,7 +281,7 @@ app.get(
     const search = (await connections.meli?.index("illusts").search(query, {
       page: page + 1,
       limit: PAGE_LIMIT,
-      filter: "banned == false",
+      filter: "banned = false",
       sort: sortReq,
     })) ?? { hits: [], totalPages: 0 };
 
@@ -300,7 +309,7 @@ app.get("/search/illustrator/:query", pageValidator, queryFilter, async (c) => {
   const search = (await connections.meli?.index("users").search(query, {
     page: page + 1,
     limit: PAGE_LIMIT,
-    filter: "banned == false",
+    filter: "banned = false",
   })) ?? { hits: [], totalPages: 0 };
 
   const ids = search.hits.map((hit) => hit.id);
@@ -331,7 +340,7 @@ app.get("/illust/:id/recommend", pageValidator, async (c) => {
     .search(tags.join(" "), {
       page: page + 1,
       limit: PAGE_LIMIT,
-      filter: "banned == false",
+      filter: "banned = false",
       hybrid: {
         semanticRatio: 0.9,
         embedder: "default",

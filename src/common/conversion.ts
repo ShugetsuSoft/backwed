@@ -33,6 +33,9 @@ export const error = (error: Errors): BackendResponse => {
     case Errors.InvalidRequest:
       message = "请求参数错误";
       break;
+    case Errors.TryInFewMinutes:
+      message = "请稍后再试";
+      break;
   }
   return {
     status: error,
@@ -45,7 +48,7 @@ export const fromPixivIllust = (data: fetchIllustBody) => {
     _id: parseInt(data.id),
     title: data.title,
     altTitle: data.alt,
-    description: filtered(data.description),
+    description: filtered(data.description??""),
     type: data.illustType,
     createDate: new Date(data.createDate),
     uploadDate: new Date(data.uploadDate),

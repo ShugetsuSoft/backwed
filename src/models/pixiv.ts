@@ -132,8 +132,8 @@ export interface fetchRankRoot {
   mode: string
   content: string
   page: number
-  prev: boolean
-  next: number
+  prev: boolean|number
+  next: number|boolean
   date: string
   prev_date: string
   next_date: boolean

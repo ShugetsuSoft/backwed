@@ -18,5 +18,5 @@ app.route("/v3", v3);
 
 export default {
   fetch: app.fetch,
-  port: 3000,
+  port: 3008,
 };

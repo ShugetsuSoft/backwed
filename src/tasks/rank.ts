@@ -13,7 +13,8 @@ export const runRankTask = async () => {
         for (let mode of RANK_MODES[content]) {
             const illusts = []
             let ranked = 0
-            for (let page of [1,2,3,4,5,6,7,8,9,10]) {
+            let page = 1
+            while (true) {
                 const rank = await fetchRank(mode, page, date, content)
                 const illustIds = rank.contents.map(content => content.illust_id)
                 for (let illustId of illustIds) {
@@ -35,6 +36,10 @@ export const runRankTask = async () => {
                       }
                     })
                   ).run();
+                if (rank.next === false) {
+                    break
+                }
+                page = rank.next as number
             }
             const rankDB = new Rank({
                 date,
