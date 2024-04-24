@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "build": "bun build --compile --minify --sourcemap src/index.ts --outfile backend"
+  },
+  "dependencies": {
+    "hono": "^4.2.3",
+    "meilisearch": "^0.38.0",
+    "mongoose": "^8.3.2"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
