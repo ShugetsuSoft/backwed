@@ -35,7 +35,7 @@ import { connections } from "../utils/connect";
 import { filter } from "../utils/filter";
 
 const workingTasks = {
-  userIllusts: new Set<number>(),
+  userIllusts: new Set<any>(),
 }
 
 const pageValidator = validator("query", (value, c) => {

@@ -20,12 +20,17 @@ export interface FilterConfig {
   file: string;
 }
 
+export interface ServerConfig {
+  cors: string[];
+}
+
 export interface Config {
   mongo: MongoConfig;
   meli: MeiliConfig;
   openai: OpenAiConfig;
   pixiv: PixivConfig;
   filter: FilterConfig;
+  server: ServerConfig;
 }
 
 export var config: Config = {} as Config
