@@ -32,6 +32,7 @@ import {
 } from "../models/const";
 import PromisePool from "../utils/pool";
 import { connections } from "../utils/connect";
+import { filter } from "../utils/filter";
 
 const pageValidator = validator("query", (value, c) => {
   const page = value["page"];
@@ -49,6 +50,16 @@ const pageValidator = validator("query", (value, c) => {
   }
 });
 
+const queryFilter = validator("param", (value, c) => {
+  const query = value["query"];
+  if (!query || typeof query !== "string") {
+    return c.json(error(Errors.InvalidRequest));
+  }
+  if (filter.check(query)) {
+    return c.json(error(Errors.Banned));
+  }
+  return { query: query };
+});
 const app = new Hono();
 
 app.get("/illust/:id", async (c) => {
@@ -236,54 +247,60 @@ app.get(
   }
 );
 
-app.get("/search/illust/:query", pageValidator, validator("query", (value, c) => {
-  const sort = value['sort'];
-  if (!sort || typeof sort !== "string") {
-    return { sort: "relevent" };
-  }
-  if (sort == "relevent" || sort == "popular" || sort == "time") {
-    return { sort: sort };
-  }
-}), async (c) => {
-  const { page, sort } = c.req.valid("query");
-  const query = c.req.param("query");
-  const sortReq: string[] = [];
-  if (sort === "time") {
-    sortReq.push("createTime:desc");
-  } else if (sort === "popular") {
-    sortReq.push("popularity:desc");
-  }
-  const search = (await connections.meli?.index("illusts").search(query, {
-    page: page + 1,
-    limit: PAGE_LIMIT,
-    filter: "banned == false",
-    sort: sortReq,
-  })) ?? { hits: [], totalPages: 0 };
+app.get(
+  "/search/illust/:query",
+  pageValidator,
+  validator("query", (value, c) => {
+    const sort = value["sort"];
+    if (!sort || typeof sort !== "string") {
+      return { sort: "relevent" };
+    }
+    if (sort == "relevent" || sort == "popular" || sort == "time") {
+      return { sort: sort };
+    }
+  }),
+  queryFilter,
+  async (c) => {
+    const { page, sort } = c.req.valid("query");
+    const { query } = c.req.valid("param");
+    const sortReq: string[] = [];
+    if (sort === "time") {
+      sortReq.push("createTime:desc");
+    } else if (sort === "popular") {
+      sortReq.push("popularity:desc");
+    }
+    const search = (await connections.meli?.index("illusts").search(query, {
+      page: page + 1,
+      limit: PAGE_LIMIT,
+      filter: "banned == false",
+      sort: sortReq,
+    })) ?? { hits: [], totalPages: 0 };
 
-  const ids = search.hits.map((hit) => hit.id);
-  const illusts = await Illust.find({ _id: { $in: ids } }).exec();
-  const projects: Record<string, number> = {};
-  for (let i = 0; illusts.length > i; i++) {
-    projects[illusts[i]._id ?? 0] = i;
-  }
-  const illustsSorted = ids.map((id) => illusts[projects[id]]);
-  return c.json(
-    ok(
-      toIllustsResponse(
-        illustsSorted.map(toIllustResponse),
-        search.totalPages > page + 1
+    const ids = search.hits.map((hit) => hit.id);
+    const illusts = await Illust.find({ _id: { $in: ids } }).exec();
+    const projects: Record<string, number> = {};
+    for (let i = 0; illusts.length > i; i++) {
+      projects[illusts[i]._id ?? 0] = i;
+    }
+    const illustsSorted = ids.map((id) => illusts[projects[id]]);
+    return c.json(
+      ok(
+        toIllustsResponse(
+          illustsSorted.map(toIllustResponse),
+          search.totalPages > page + 1
+        )
       )
-    )
-  );
-});
+    );
+  }
+);
 
-app.get("/search/illustrator/:query", pageValidator, async (c) => {
+app.get("/search/illustrator/:query", pageValidator, queryFilter, async (c) => {
   const { page } = c.req.valid("query");
-  const query = c.req.param("query");
+  const { query } = c.req.valid("param");
   const search = (await connections.meli?.index("users").search(query, {
     page: page + 1,
     limit: PAGE_LIMIT,
-    filter: "banned == false"
+    filter: "banned == false",
   })) ?? { hits: [], totalPages: 0 };
 
   const ids = search.hits.map((hit) => hit.id);
@@ -307,17 +324,19 @@ app.get("/illust/:id/recommend", pageValidator, async (c) => {
   const { page } = c.req.valid("query");
   const { id } = c.req.param();
   const illust = await Illust.findById(id);
-  const tags = illust?.tags.map((tag) => tag.name??"")??[];
+  const tags = illust?.tags.map((tag) => tag.name ?? "") ?? [];
 
-  const search = (await connections.meli?.index("illusts").search(tags.join(" "), {
-    page: page + 1,
-    limit: PAGE_LIMIT,
-    filter: "banned == false",
-    hybrid: {
-      "semanticRatio": 0.9,
-      "embedder": "default"
-    }
-  })) ?? { hits: [], totalPages: 0 };
+  const search = (await connections.meli
+    ?.index("illusts")
+    .search(tags.join(" "), {
+      page: page + 1,
+      limit: PAGE_LIMIT,
+      filter: "banned == false",
+      hybrid: {
+        semanticRatio: 0.9,
+        embedder: "default",
+      },
+    })) ?? { hits: [], totalPages: 0 };
 
   const ids = search.hits.map((hit) => hit.id);
   const illusts = await Illust.find({ _id: { $in: ids } }).exec();
@@ -325,7 +344,7 @@ app.get("/illust/:id/recommend", pageValidator, async (c) => {
   for (let i = 0; illusts.length > i; i++) {
     projects[illusts[i]._id ?? 0] = i;
   }
-  
+
   const illustsSorted = ids.map((id) => illusts[projects[id]]);
   return c.json(
     ok(
@@ -335,6 +354,6 @@ app.get("/illust/:id/recommend", pageValidator, async (c) => {
       )
     )
   );
-})
+});
 
 export default app;
