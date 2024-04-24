@@ -9,6 +9,6 @@ COPY . .
 
 RUN bun run build
 
-EXPOSE 3000
-
-CMD ["./backend"]
+USER bun
+EXPOSE 3000/tcp
+ENTRYPOINT ["backend"]
