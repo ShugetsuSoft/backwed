@@ -1,5 +1,6 @@
 import { Mongoose, connect as mongooseConnect } from "mongoose";
 import { MeiliSearch } from 'meilisearch'
+import { config } from "../models/config";
 
 interface Connections {
   mongo?: Mongoose;
@@ -8,17 +9,17 @@ interface Connections {
 
 export const connections: Connections = {};
 
-export const connectMongo = async (uri: string): Promise<Connections> => {
-  const mongo = await mongooseConnect(uri);
+export const connectMongo = async (): Promise<Connections> => {
+  const mongo = await mongooseConnect(config.mongo.uri);
   console.log("MongoDB connected");
   connections.mongo = mongo;
   return connections;
 };
 
-export const connectMeliSearch = async(uri: string, key: string | undefined): Promise<Connections> => {
+export const connectMeliSearch = async(): Promise<Connections> => {
   const meli = new MeiliSearch({
-    host: uri,
-    apiKey: key,
+    host: config.meli.uri,
+    apiKey: config.meli.key,
   })
   console.log("MeiliSearch connected")
   connections.meli = meli

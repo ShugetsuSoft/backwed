@@ -1,6 +1,7 @@
 import { connections } from "../utils/connect";
+import { config } from "./config";
 
-export const initSearch = async (openiKey: string) => {
+export const initSearch = async () => {
   await connections.meli?.createIndex("illusts", {
     primaryKey: "id",
   });
@@ -34,7 +35,7 @@ export const initSearch = async (openiKey: string) => {
     embedders: {
       default: {
         source: "openAi",
-        apiKey: openiKey,
+        apiKey: config.openai.key,
         model: "text-embedding-3-small",
         documentTemplate:
           "An illustration about {{doc.originalTags||join:', '}}",
