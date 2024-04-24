@@ -2,6 +2,7 @@ import { runRankTask } from "./tasks/rank";
 import { syncronizeIllusts, syncronizeUsers } from "./tasks/sync";
 import { connectMeliSearch, connectMongo } from "./utils/connect";
 import { Config } from "./models/config";
+import { loadFilter } from "./utils/filter";
 
 const readConfig = async (path: string): Promise<Config> => {
   const file = Bun.file(path);
@@ -31,6 +32,7 @@ if (flags["help"]) {
   await readConfig("config.json");
   await connectMongo();
   await connectMeliSearch();
+  await loadFilter();
   if (flags["rank"]) {
     await runRankTask();
   } else if (flags["sync"]) {

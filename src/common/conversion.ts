@@ -4,7 +4,7 @@ import {
   fetchUserBody,
   fetchUserIllustsBody,
 } from "../models/pixiv";
-import { calcIllustPop, isIllustBanned, parseImgTime } from "../utils/calc";
+import { calcIllustPop, filtered, isIllustBanned, isUserBanned, parseImgTime } from "../utils/calc";
 import { Illust, Ugoira, User } from "../models/db";
 import {
   BackendResponse,
@@ -45,7 +45,7 @@ export const fromPixivIllust = (data: fetchIllustBody) => {
     _id: parseInt(data.id),
     title: data.title,
     altTitle: data.alt,
-    description: data.description,
+    description: filtered(data.description),
     type: data.illustType,
     createDate: new Date(data.createDate),
     uploadDate: new Date(data.uploadDate),
@@ -135,7 +135,7 @@ export const fromPixivUser = (data: fetchUserBody) => {
       background: data.background?.url ?? undefined,
     },
     illusts_update_time: new Date(0),
-    banned: false,
+    banned: isUserBanned(data),
   });
 };
 

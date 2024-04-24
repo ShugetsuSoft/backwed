@@ -126,9 +126,6 @@ app.get("/illustrator/:id/illusts", pageValidator, async (c) => {
     ).run();
     user.illusts_update_time = new Date();
     await user.save();
-    await connections.meli
-      ?.index("users")
-      ?.updateDocuments([toUserSearch(user)]);
   }
   const userResponse = toUserResponse(user);
   const illustsCountTotal = await Illust.countDocuments({ user: user._id });

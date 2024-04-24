@@ -16,11 +16,16 @@ export interface PixivConfig {
   device_token: string[];
 }
 
+export interface FilterConfig {
+  file: string;
+}
+
 export interface Config {
   mongo: MongoConfig;
   meli: MeiliConfig;
   openai: OpenAiConfig;
   pixiv: PixivConfig;
+  filter: FilterConfig;
 }
 
 export var config: Config = {} as Config
