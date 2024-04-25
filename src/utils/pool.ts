@@ -38,6 +38,7 @@ export default class PromisePool<T> {
                 await executeNext(); // Recursively start next task before current finishes
             } catch (error) {
                 console.error('A promise failed:', error);
+                throw error;
             } finally {
                 this.activeCount--;
                 await executeNext(); // Start next task after current finishes

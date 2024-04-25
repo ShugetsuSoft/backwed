@@ -11,7 +11,11 @@ const userSchema = new Schema(
       background: String,
     },
     illusts_update_time: Date,
-    banned: Boolean,
+    banned: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -24,15 +28,29 @@ const illustSchema = new Schema(
     title: String,
     altTitle: String,
     description: String,
-    type: Number,
-    createDate: Date,
+    type: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
+    createDate: {
+      type: Date,
+      index: true,
+    },
     uploadDate: Date,
-    sanity: Number,
+    sanity: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
     width: Number,
     height: Number,
     pageCount: Number,
     tags: [{
-      name: String,
+      name: {
+        type: String,
+        index: true,
+      },
       translation: String,
     }],
     statistic: {
@@ -41,11 +59,22 @@ const illustSchema = new Schema(
       comments: Number,
       views: Number,
     },
-    user: Number,
-    image: Date,
-    aiType: Number,
+    user: {
+      type: Number,
+      index: true,
+    },
+    image: String,
+    aiType: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
     popularity: Number,
-    banned: Boolean,
+    banned: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -56,9 +85,15 @@ const illustSchema = new Schema(
 
 const rankSchema = new Schema(
   {
-    date: String,
-    mode: String,
-    content: String,
+    date: {
+      type: String,
+    },
+    mode: {
+      type: String,
+    },
+    content: {
+      type: String,
+    },
     illusts: [
       {
         id: Number,
@@ -71,11 +106,13 @@ const rankSchema = new Schema(
   }
 );
 
+rankSchema.index({ date: -1, mode: 1, content: 1 }, { unique: true });
+
 const ugoiraSchema = new Schema(
   {
     _id: Number,
     update_time: Date,
-    image: Date,
+    image: String,
     mimeType: String,
     frames: [
       {

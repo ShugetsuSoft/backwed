@@ -1,8 +1,8 @@
 export const PAGE_LIMIT = 50;
 export enum Errors {
-  Banned = 0,
-  InvalidRequest = 1,
-  TryInFewMinutes = 2,
+  Banned = 1,
+  InvalidRequest = 2,
+  TryInFewMinutes = 3,
 }
 export const CONCURRENCY = 1;
 export const RANK_CONTENTS = ["all", "illust", "manga", "ugoira"];

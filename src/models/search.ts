@@ -32,7 +32,7 @@ export const initSearch = async () => {
       "originalTags",
       "translatedTags",
     ],
-    embedders: {
+    /*embedders: {
       default: {
         source: "openAi",
         apiKey: config.openai.key,
@@ -41,7 +41,7 @@ export const initSearch = async () => {
           "An illustration about {{doc.originalTags}}",
         dimensions: 1536,
       },
-    },
+    },*/
   });
   await connections.meli?.createIndex("users", {
     primaryKey: "id",

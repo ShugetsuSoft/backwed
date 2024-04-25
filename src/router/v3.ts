@@ -123,6 +123,9 @@ app.get("/illustrator/:id/illusts", pageValidator, async (c) => {
     (user.illusts_update_time?.getTime() ?? 0) + 172800000 <
     new Date().getTime()
   ) {
+    if (workingTasks.userIllusts.size > 1) {
+      return c.json(error(Errors.TryInFewMinutes));
+    }
     if (workingTasks.userIllusts.has(id)) {
       return c.json(error(Errors.TryInFewMinutes));
     }
@@ -135,6 +138,11 @@ app.get("/illustrator/:id/illusts", pageValidator, async (c) => {
         const illust = await Illust.findById(illust_id);
         if (!illust) {
           const fetchedIllust = await fetchIllust(illust_id);
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          if (fetchedIllust.tags.tags === undefined) {
+            workingTasks.userIllusts.delete(id);
+            throw new Error("Rate limit exceeded");
+          }
           const illust = fromPixivIllust(fetchedIllust);
           await illust.save();
           await connections.meli
@@ -337,17 +345,17 @@ app.get("/illust/:id/recommend", pageValidator, async (c) => {
 
   const search = (await connections.meli
     ?.index("illusts")
-    .search(tags.join(" "), {
+    .search(tags.join(", "), {
       page: page + 1,
       limit: PAGE_LIMIT,
       filter: "banned = false",
-      hybrid: {
-        semanticRatio: 0.9,
+      /*hybrid: {
+        semanticRatio: 1,
         embedder: "default",
-      },
+      },*/
     })) ?? { hits: [], totalPages: 0 };
 
-  const ids = search.hits.map((hit) => hit.id);
+  const ids = search.hits.map((hit) => hit.id).filter((id) => id !== illust?._id);
   const illusts = await Illust.find({ _id: { $in: ids } }).exec();
   const projects: Record<string, number> = {};
   for (let i = 0; illusts.length > i; i++) {

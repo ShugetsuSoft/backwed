@@ -4,7 +4,7 @@ import {
   fetchUserBody,
   fetchUserIllustsBody,
 } from "../models/pixiv";
-import { calcIllustPop, filtered, isIllustBanned, isUserBanned, parseImgTime } from "../utils/calc";
+import { calcIllustPop, filtered, isIllustBanned, isUserBanned, parseImg } from "../utils/calc";
 import { Illust, Ugoira, User } from "../models/db";
 import {
   BackendResponse,
@@ -69,7 +69,7 @@ export const fromPixivIllust = (data: fetchIllustBody) => {
     user: parseInt(data.userId),
     popularity: calcIllustPop(data.bookmarkCount, data.likeCount),
     banned: isIllustBanned(data),
-    image: parseImgTime(data.urls.original),
+    image: parseImg(data.urls.original),
     aiType: data.aiType,
   });
 };
@@ -98,7 +98,7 @@ export const toIllustResponse = (illust: Illust): IllustResponse => {
       views: illust.statistic?.views ?? 0,
     },
     user: illust.user ?? 0,
-    image: illust.image?.toISOString() ?? "",
+    image: illust.image ?? "",
     aiType: illust.aiType ?? 0,
   };
 };
@@ -130,8 +130,8 @@ export const toIllustSearch = (illust: Illust): IllustSearch => {
 export const fromPixivUser = (data: fetchUserBody) => {
   return new User({
     _id: parseInt(data.userId),
-    name: data.name,
-    bio: data.comment,
+    name: filtered(data.name),
+    bio: filtered(data.comment),
     image: {
       url: data.image,
       bigUrl: data.imageBig,
@@ -201,7 +201,7 @@ export const fromPixivUgoira = (data: fetchUgoiraBody, id: number) => {
   return new Ugoira({
     _id: id,
     mimeType: data.mime_type,
-    image: parseImgTime(data.src),
+    image: parseImg(data.src),
     frames: data.frames.map((frame) => ({
       file: frame.file,
       delay: frame.delay,
@@ -212,7 +212,7 @@ export const fromPixivUgoira = (data: fetchUgoiraBody, id: number) => {
 export const toUgoiraResponse = (ugoira: Ugoira): UgoiraResponse => {
   return {
     id: ugoira._id ?? 0,
-    image: ugoira.image?.toISOString() ?? "",
+    image: ugoira.image ?? "",
     mimeType: ugoira.mimeType ?? "",
     frames: ugoira.frames.map((frame) => ({
       file: frame.file ?? "",

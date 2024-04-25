@@ -34,7 +34,11 @@ if (flags["help"]) {
   await initSearch();
   await loadFilter();
   if (flags["rank"]) {
-    await runRankTask();
+    if (flags["rank"] !== true) {
+      await runRankTask(flags["rank"] as string);
+    } else {
+      await runRankTask(null);
+    }
   } else if (flags["sync"]) {
     if (flags["sync"] == "users") {
       console.log("Syncronizing Users");

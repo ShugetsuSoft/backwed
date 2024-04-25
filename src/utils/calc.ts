@@ -5,15 +5,14 @@ export function calcIllustPop(bookmarks: number, likes: number) {
   return (bookmarks * 70 + likes * 30) / 100;
 }
 
-export function parseImgTime(url: string) {
+export function parseImg(url: string) {
   const date_str = url.substring(
     url.indexOf("/img/") + 5,
     url.lastIndexOf("/")
   );
   let parts = date_str.replace(/\//g, " ").split(" ");
-  let formattedString = `${parts[0]}-${parts[1]}-${parts[2]}T${parts[3]}:${parts[4]}:${parts[5]}`;
-  let date = new Date(formattedString);
-  return date;
+  let formattedString = `${parts[0]}${parts[1]}${parts[2]}${parts[3]}${parts[4]}${parts[5]}`;
+  return formattedString;
 }
 
 const bannedTagList = ["+18", "nude", "r18", "r-18", "r-18g"];
@@ -47,9 +46,6 @@ export function filtered(content: string) {
 }
 
 export function isUserBanned(raw: fetchUserBody) {
-  if (filter.check(raw.comment)) {
-    return true;
-  }
   if (filter.check(raw.name)) {
     return true;
   }

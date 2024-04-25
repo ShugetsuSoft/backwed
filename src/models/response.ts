@@ -80,7 +80,7 @@ export interface UgoiraResponse {
 }
 
 export interface BackendResponse {
-  status: Errors;
+  status: Errors | 0;
   message?: string;
   data?: any;
 }

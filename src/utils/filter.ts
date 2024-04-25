@@ -163,7 +163,7 @@ export class Filter {
   }
 
   detoxify(text: string) {
-    return this.AC.replace(text, "*");
+    return this.AC.replace(text, "*****");
   }
 }
 
