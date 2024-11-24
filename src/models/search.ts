@@ -32,6 +32,15 @@ export const initSearch = async () => {
       "originalTags",
       "translatedTags",
     ],
+    rankingRules: [
+      "words",
+      "sort",
+      "typo",
+      "proximity",
+      "attribute",
+      "exactness"
+    ]
+    
     /*embedders: {
       default: {
         source: "openAi",

@@ -33,6 +33,7 @@ import {
 import PromisePool from "../utils/pool";
 import { connections } from "../utils/connect";
 import { filter } from "../utils/filter";
+import { set } from "mongoose";
 
 const workingTasks = {
   userIllusts: new Set<any>(),
@@ -57,10 +58,10 @@ const pageValidator = validator("query", (value, c) => {
 const queryFilter = validator("param", (value, c) => {
   const query = value["query"];
   if (!query || typeof query !== "string") {
-    return c.json(error(Errors.InvalidRequest));
+    return c.json(error(Errors.InvalidRequest), 500);
   }
   if (filter.check(query)) {
-    return c.json(error(Errors.Banned));
+    return c.json(error(Errors.Banned), 500);
   }
   return { query: query };
 });
@@ -71,13 +72,16 @@ app.get("/illust/:id", async (c) => {
   let illust = await Illust.findById(id);
   if (!illust) {
     const fetchedIllust = await fetchIllust(id);
+    if (!fetchedIllust) {
+      return c.json(error(Errors.TryInFewMinutes), 500);
+    }
     illust = fromPixivIllust(fetchedIllust);
     await illust.save();
     await connections.meli
       ?.index("illusts")
       ?.addDocuments([toIllustSearch(illust)]);
   }
-  if (illust.banned) return c.json(error(Errors.Banned));
+  if (illust.banned) return c.json(error(Errors.Banned), 500);
   const response = toIllustResponse(illust);
   return c.json(ok(response));
 });
@@ -87,6 +91,9 @@ app.get("/illust/:id/ugoira", async (c) => {
   let ugoira = await Ugoira.findById(id);
   if (!ugoira) {
     const fetchedUgoira = await fetchUgoira(id);
+    if (!fetchedUgoira) {
+      return c.json(error(Errors.TryInFewMinutes), 500);
+    }
     ugoira = fromPixivUgoira(fetchedUgoira, parseInt(id));
     await ugoira.save();
   }
@@ -99,11 +106,14 @@ app.get("/illustrator/:id", async (c) => {
   let user = await User.findById(id);
   if (!user) {
     const fetchedUser = await fetchUser(id);
+    if (!fetchedUser) {
+      return c.json(error(Errors.TryInFewMinutes), 500);
+    }
     user = fromPixivUser(fetchedUser);
     await user.save();
     await connections.meli?.index("users")?.addDocuments([toUserSearch(user)]);
   }
-  if (user.banned) return c.json(error(Errors.Banned));
+  if (user.banned) return c.json(error(Errors.Banned), 500);
   const response = toUserResponse(user);
   return c.json(ok(response));
 });
@@ -115,6 +125,9 @@ app.get("/illustrator/:id/illusts", pageValidator, async (c) => {
   let user = await User.findById(id);
   if (!user) {
     const fetchedUser = await fetchUser(id);
+    if (!fetchedUser) {
+      return c.json(error(Errors.TryInFewMinutes), 500);
+    }
     user = fromPixivUser(fetchedUser);
     await user.save();
     await connections.meli?.index("users")?.addDocuments([toUserSearch(user)]);
@@ -124,34 +137,48 @@ app.get("/illustrator/:id/illusts", pageValidator, async (c) => {
     new Date().getTime()
   ) {
     if (workingTasks.userIllusts.size > 1) {
-      return c.json(error(Errors.TryInFewMinutes));
+      return c.json(error(Errors.TryInFewMinutes), 500);
     }
     if (workingTasks.userIllusts.has(id)) {
-      return c.json(error(Errors.TryInFewMinutes));
+      return c.json(error(Errors.TryInFewMinutes), 500);
     }
+    
     const fetchedUserIllusts = await fetchUserIllusts(id);
+    if (!fetchedUserIllusts) {
+      return c.json(error(Errors.TryInFewMinutes), 500);
+    }
     const fetchedUserIllustsRes = fromPixivUserIllusts(fetchedUserIllusts);
     workingTasks.userIllusts.add(id);
-    await new PromisePool(
-      CONCURRENCY,
-      fetchedUserIllustsRes.map((illust_id) => async () => {
-        const illust = await Illust.findById(illust_id);
-        if (!illust) {
-          const fetchedIllust = await fetchIllust(illust_id);
-          await new Promise((resolve) => setTimeout(resolve, 200));
-          if (fetchedIllust.tags.tags === undefined) {
-            workingTasks.userIllusts.delete(id);
-            throw new Error("Rate limit exceeded");
-          }
-          const illust = fromPixivIllust(fetchedIllust);
-          await illust.save();
-          await connections.meli
-            ?.index("illusts")
-            ?.addDocuments([toIllustSearch(illust)]);
+    const timeout = setTimeout(() => {
+      workingTasks.userIllusts.delete(id);
+    }, 120000);
+    for (let illustId of fetchedUserIllustsRes) {
+      if (!workingTasks.userIllusts.has(id)) {
+        break;
+      }
+      const illust = await Illust.findById(illustId);
+      if (!illust) {
+        const fetchedIllust = await fetchIllust(illustId);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        if (!fetchedIllust) {
+          workingTasks.userIllusts.delete(id);
+          clearTimeout(timeout);
+          return c.json(error(Errors.TryInFewMinutes), 500);
         }
-      })
-    ).run();
+        if (fetchedIllust.tags === undefined) {
+          workingTasks.userIllusts.delete(id);
+          clearTimeout(timeout);
+          return c.json(error(Errors.TryInFewMinutes), 500);
+        }
+        const illust = fromPixivIllust(fetchedIllust);
+        await illust.save();
+        await connections.meli
+          ?.index("illusts")
+          ?.addDocuments([toIllustSearch(illust)]);
+      }
+    }
     workingTasks.userIllusts.delete(id);
+    clearTimeout(timeout);
     user.illusts_update_time = new Date();
     await user.save();
   }
@@ -179,39 +206,39 @@ app.get(
     const content = value["content"];
     let page = value["page"];
     if (!page || typeof page !== "string") {
-      return c.json(error(Errors.InvalidRequest));
+      return c.json(error(Errors.InvalidRequest), 500);
     }
     if (!mode || typeof mode !== "string") {
-      return c.json(error(Errors.InvalidRequest));
+      return c.json(error(Errors.InvalidRequest), 500);
     }
     if (!date || typeof date !== "string") {
-      return c.json(error(Errors.InvalidRequest));
+      return c.json(error(Errors.InvalidRequest), 500);
     }
     if (!content || typeof content !== "string") {
-      return c.json(error(Errors.InvalidRequest));
+      return c.json(error(Errors.InvalidRequest), 500);
     }
     if (!RANK_CONTENTS.includes(content)) {
-      return c.json(error(Errors.InvalidRequest));
+      return c.json(error(Errors.InvalidRequest), 500);
     }
     if (!RANK_MODES[content].includes(mode)) {
-      return c.json(error(Errors.InvalidRequest));
+      return c.json(error(Errors.InvalidRequest), 500);
     }
     if (date.length !== 8) {
-      return c.json(error(Errors.InvalidRequest));
+      return c.json(error(Errors.InvalidRequest), 500);
     }
     try {
       parseInt(date);
     } catch {
-      return c.json(error(Errors.InvalidRequest));
+      return c.json(error(Errors.InvalidRequest), 500);
     }
     let pageNum = 0;
     try {
       pageNum = parseInt(page);
       if (isNaN(pageNum) || pageNum < 0) {
-        return c.json(error(Errors.InvalidRequest));
+        return c.json(error(Errors.InvalidRequest), 500);
       }
     } catch {
-      return c.json(error(Errors.InvalidRequest));
+      return c.json(error(Errors.InvalidRequest), 500);
     }
     return {
       mode: mode,
@@ -257,6 +284,9 @@ app.get(
       },
     ]).exec();
     const illusts = rank.map((r) => r.content);
+    if (illusts.length == 0) {
+      return c.json(error(Errors.TryInFewMinutes), 500);
+    }
     const illustsResponse = illusts.map(toIllustResponse);
     return c.json(
       ok(toIllustsResponse(illustsResponse, page < 9 && illusts.length > 0))
@@ -340,7 +370,19 @@ app.get("/search/illustrator/:query", pageValidator, queryFilter, async (c) => {
 app.get("/illust/:id/recommend", pageValidator, async (c) => {
   const { page } = c.req.valid("query");
   const { id } = c.req.param();
-  const illust = await Illust.findById(id);
+  let illust = await Illust.findById(id);
+  if (!illust) {
+    const fetchedIllust = await fetchIllust(id);
+    if (!fetchedIllust) {
+      return c.json(error(Errors.TryInFewMinutes), 500);
+    }
+    illust = fromPixivIllust(fetchedIllust);
+    await illust.save();
+    await connections.meli
+      ?.index("illusts")
+      ?.addDocuments([toIllustSearch(illust)]);
+  }
+  if (illust.banned) return c.json(error(Errors.Banned), 500);
   const tags = illust?.tags.map((tag) => tag.name ?? "") ?? [];
 
   const search = (await connections.meli

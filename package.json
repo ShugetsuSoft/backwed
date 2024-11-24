@@ -5,8 +5,8 @@
   },
   "dependencies": {
     "hono": "^4.2.3",
-    "meilisearch": "^0.38.0",
-    "mongoose": "^8.3.2"
+    "meilisearch": "^0.45.0",
+    "mongoose": "^8.8.0"
   },
   "devDependencies": {
     "@types/bun": "latest"

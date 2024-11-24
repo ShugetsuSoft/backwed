@@ -14,6 +14,7 @@ export interface OpenAiConfig {
 export interface PixivConfig {
   token: string[];
   device_token: string[];
+  proxies: string[];
 }
 
 export interface FilterConfig {
